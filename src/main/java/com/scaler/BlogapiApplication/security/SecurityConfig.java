@@ -10,31 +10,34 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.servlet.util.matcher.MvcRequestMatcher;
+import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 
 
 @Configuration
 @EnableWebSecurity
+@EnableWebMvc
 public class SecurityConfig {
     @Bean
     MvcRequestMatcher.Builder mvc(HandlerMappingIntrospector introspector) {
         return new MvcRequestMatcher.Builder(introspector);
     }
+
     private final TokenService tokenService;
 
     SecurityConfig(TokenService tokenService){
         this.tokenService=tokenService;
     }
-    @Autowired MvcRequestMatcher.Builder mvc;
+
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception{
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, MvcRequestMatcher.Builder mvc) throws Exception{
         http
                 .authorizeHttpRequests((authorize) -> authorize
                 .requestMatchers(mvc.pattern(HttpMethod.GET,"/articles")).permitAll()
                 .requestMatchers(mvc.pattern(HttpMethod.POST,"/users/signup")).permitAll()
                 .requestMatchers(mvc.pattern(HttpMethod.POST,"/users/login")).permitAll()
                 .requestMatchers(mvc.pattern("/h2-console/**")).permitAll()
-                .anyRequest().permitAll())
+                .anyRequest().authenticated())
                 .csrf(AbstractHttpConfigurer :: disable);
         http.addFilterBefore(new JWTAuthenticationFilter(tokenService), AnonymousAuthenticationFilter.class);
         return http.build();
